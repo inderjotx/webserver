@@ -1,4 +1,3 @@
-use serde::de::value::Error;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -81,7 +80,12 @@ async fn handle_request(path: &str) -> Result<Response, std::io::Error> {
         return Ok(Response::new(200, ContentType::TextHtml, content));
     } else {
         let file_path = format!("./www{path}/index.html",);
-        let mut file = File::open(file_path).await?;
+        let fallback_path = format!("./www{path}");
+        let mut file = match File::open(file_path).await {
+            Ok(f) => f,
+            Err(_) => File::open(fallback_path).await?,
+        };
+
         file.read_to_string(&mut content).await?;
 
         return Ok(Response::new(200, ContentType::TextHtml, content));
