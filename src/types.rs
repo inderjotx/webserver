@@ -30,6 +30,29 @@ pub struct Request {
     pub headers: Vec<(String, String)>,
 }
 
+pub struct Response {
+    pub code: u32,
+    pub header: String,
+    pub content: String,
+}
+
+impl Response {
+    pub fn new(code: u32, header: ContentType, content: String) -> Self {
+        let string_header = match header {
+            ContentType::ApplicationJson => "application/json",
+            ContentType::TextHtml => "text/html",
+            ContentType::TextPlain => "text/plain",
+            ContentType::Unknown => "application/json",
+        };
+
+        Response {
+            code: code,
+            header: String::from(string_header),
+            content: content,
+        }
+    }
+}
+
 impl Request {
     pub fn new() -> Self {
         Request {

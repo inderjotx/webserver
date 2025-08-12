@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Page Title</title>
+</head>
+
+<body>
+    <h2>Welcome To GFG</h2>
+    <p>
+        Default code has been
+        loaded into the Editor.
+    </p>
+</body>
+
+</html>
