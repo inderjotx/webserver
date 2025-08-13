@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 use tokio::task::JoinSet;
 
 use tokio::fs::File;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 mod types;
 use types::*;
 
@@ -55,11 +55,15 @@ impl App {
 
         let stop_signal = Arc::clone(&self.abort_signal);
 
-        ctrlc_async::set_async_handler(async move {
+        tokio::spawn(async move {
+            if let Err(e) = tokio::signal::ctrl_c().await {
+                eprintln!("Failed to listen for Ctrl+C: {}", e);
+                return;
+            }
             println!("Shutting server down...");
             let mut lock = stop_signal.lock().await;
             *lock = true;
-        })?;
+        });
 
         set.join_next().await;
         set.join_next().await;
@@ -123,16 +127,19 @@ async fn handle(queue: Arc<Mutex<Vec<(TcpStream, SocketAddr)>>>, signal: Arc<Mut
         }
 
         set.abort_all();
-        println!("Stoped handling clients")
+        println!("Stoped handling clients");
+        break;
     }
 }
 
-async fn req_handler(stream: &mut TcpStream) -> Result<String> {
+async fn req_handler(stream: &mut TcpStream) -> Result<()> {
     let req = req_buffer(stream).await?;
+
     let parsed_req = Request::parse_from_bytes(&req)?;
     let res = req_map(&parsed_req.path).await?;
     let formatted_res = res_formatter(res);
-    Ok(formatted_res)
+    stream.write(formatted_res.as_bytes()).await?;
+    Ok(())
 }
 
 async fn req_buffer(stream: &mut TcpStream) -> std::io::Result<[u8; MAX_HEADER_SIZE]> {
@@ -169,9 +176,14 @@ async fn req_map(path: &str) -> Result<Response> {
     } else {
         let file_path = format!("./www{path}/index.html",);
         let fallback_path = format!("./www{path}");
+        let not_found_path = format!("./www/not-found/index.html");
+
         let mut file = match File::open(file_path).await {
             Ok(f) => f,
-            Err(_) => File::open(fallback_path).await?,
+            Err(_) => match File::open(fallback_path).await {
+                Ok(f) => f,
+                Err(_) => File::open(not_found_path).await?,
+            },
         };
 
         file.read_to_string(&mut content).await?;

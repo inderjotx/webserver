@@ -1,5 +1,4 @@
 pub const KB: usize = 1024;
-pub const PORT: usize = 3000;
 pub const MAX_HEADER_SIZE: usize = 1 * KB; // 1 KB 
 
 #[derive(Debug)]
@@ -19,7 +18,7 @@ pub enum MethodType {
     UNKNOWN,
 }
 
-const supported_http_versions: [&str; 3] = ["HTTP/1.1", "HTTP/1.0", "HTTP/2.0"];
+const SUPPORTED_HTTP_VERSIONS: [&str; 3] = ["HTTP/1.1", "HTTP/1.0", "HTTP/2.0"];
 pub struct Request {
     pub http_v: String,
     pub path: String,
@@ -95,7 +94,7 @@ impl Request {
         request.path = request_line[1].to_string();
         request.http_v = request_line[2].to_string();
 
-        if !supported_http_versions.contains(&request.http_v.as_str()) {
+        if !SUPPORTED_HTTP_VERSIONS.contains(&request.http_v.as_str()) {
             return Err("Invalid http type ".to_string());
         }
 
